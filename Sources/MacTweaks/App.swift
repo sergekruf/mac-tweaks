@@ -14,24 +14,28 @@ struct MacTweaksApp: App {
 /// Один раздел настроек. Новые фишки добавляются сюда отдельным кейсом.
 enum TweakModule: String, CaseIterable, Identifiable {
     case menuBar
+    case dock
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
         case .menuBar: "Строка меню"
+        case .dock: "Dock"
         }
     }
 
     var icon: String {
         switch self {
         case .menuBar: "menubar.rectangle"
+        case .dock: "dock.rectangle"
         }
     }
 
     @ViewBuilder var view: some View {
         switch self {
         case .menuBar: MenuBarSpacingView()
+        case .dock: DockView()
         }
     }
 }
