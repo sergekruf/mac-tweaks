@@ -1,53 +1,46 @@
 /// Что Mac Tweaks делает с указателем мыши. Значения пишутся в свойства HID-службы мыши:
-/// `HIDMouseAcceleration` (кривая ускорения, −1 — без ускорения) и `HIDPointerResolution` (чем меньше, тем быстрее курсор).
+/// `HIDUseLinearScalingMouseAcceleration` (1 — линейный режим, без разгона) и `HIDMouseAcceleration`
+/// (в линейном режиме — просто множитель скорости, в обычном — кривая ускорения от ползунка «Скорость перемещения»).
 public struct PointerSettings: Equatable {
     /// Курсор движется строго пропорционально мыши, как в Windows без «Повышенной точности».
-    public var disableAcceleration: Bool
-    /// Множитель скорости относительно исходной у мыши; 1 — как было.
+    public var linear: Bool
+    /// Скорость в линейном режиме (значение HIDMouseAcceleration).
     public var speed: Double
 
-    public static let speedRange = 0.3...3.0
+    public static let speedRange = 0.2...5.0
+    public static let defaultSpeed = 1.5
 
-    public init(disableAcceleration: Bool = false, speed: Double = 1) {
-        self.disableAcceleration = disableAcceleration
+    public init(linear: Bool = false, speed: Double = defaultSpeed) {
+        self.linear = linear
         self.speed = speed
     }
 
-    /// Ничего не меняем — значения мыши должны совпадать с системными.
-    public var isDefault: Bool { !disableAcceleration && speed == 1 }
+    /// Ничего не меняем — у мыши системные значения.
+    public var isDefault: Bool { !linear }
 }
 
 /// Значения, которые должны стоять у одной мыши.
 public struct PointerTargets: Equatable {
+    public var linear: Bool
     public var acceleration: Double
-    public var resolution: Double
 
-    public init(acceleration: Double, resolution: Double) {
+    public init(linear: Bool, acceleration: Double) {
+        self.linear = linear
         self.acceleration = acceleration
-        self.resolution = resolution
     }
 }
 
 public enum PointerMath {
-    /// Без ускорения — особое значение HIDMouseAcceleration.
-    public static let noAcceleration = -1.0
-    /// Разрешение по умолчанию, если у мыши свойство не задано (400 точек на дюйм, как в IOHIDFamily).
-    public static let defaultResolution = 400.0
-    /// Пределы HIDPointerResolution, которые принимает система.
-    public static let resolutionRange = 10.0...1995.0
-
     /// - Parameters:
-    ///   - systemAcceleration: текущее ускорение из Системных настроек (ползунок «Скорость перемещения»).
-    ///   - initialResolution: разрешение мыши до того, как Mac Tweaks его менял; nil — не было задано.
-    public static func targets(_ settings: PointerSettings, systemAcceleration: Double, initialResolution: Double?) -> PointerTargets {
-        let base = initialResolution ?? defaultResolution
+    ///   - systemAcceleration: ускорение из Системных настроек (ползунок «Скорость перемещения»).
+    ///   - systemLinear: системный флаг линейного режима (`com.apple.mouse.linear`) — его и возвращаем при сбросе.
+    public static func targets(_ settings: PointerSettings, systemAcceleration: Double, systemLinear: Bool) -> PointerTargets {
+        guard settings.linear else { return PointerTargets(linear: systemLinear, acceleration: systemAcceleration) }
         let speed = min(max(settings.speed, PointerSettings.speedRange.lowerBound), PointerSettings.speedRange.upperBound)
-        let resolution = min(max(base / speed, resolutionRange.lowerBound), resolutionRange.upperBound)
-        return PointerTargets(acceleration: settings.disableAcceleration ? noAcceleration : systemAcceleration,
-                              resolution: speed == 1 ? base : resolution)
+        return PointerTargets(linear: true, acceleration: speed)
     }
 
-    /// IOFixed (16.16) ↔ Double — так эти свойства хранятся в HID.
+    /// IOFixed (16.16) ↔ Double — так HIDMouseAcceleration хранится в HID.
     public static func fixed(_ value: Double) -> Int32 { Int32((value * 65_536).rounded()) }
     public static func double(_ fixed: Int32) -> Double { Double(fixed) / 65_536 }
 }

@@ -46,7 +46,7 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(wheelLines, forKey: "wheelLines"); MouseScroller.shared.apply(scrollSettings) }
     }
     static let wheelLinesRange = 1...10
-    /// Указатель мыши: без ускорения и множитель скорости (1 — как в системе).
+    /// Указатель мыши: без ускорения и скорость в этом режиме.
     @Published var pointerLinear: Bool {
         didSet { defaults.set(pointerLinear, forKey: "pointerLinear"); MousePointer.shared.apply(pointerSettings) }
     }
@@ -55,7 +55,7 @@ final class AppSettings: ObservableObject {
     }
 
     var pointerSettings: PointerSettings {
-        PointerSettings(disableAcceleration: pointerLinear, speed: pointerSpeed)
+        PointerSettings(linear: pointerLinear, speed: pointerSpeed)
     }
 
     var scrollSettings: ScrollSettings {
@@ -65,7 +65,7 @@ final class AppSettings: ObservableObject {
     var onChange: (() -> Void)?
 
     private init() {
-        defaults.register(defaults: ["showStatusItem": true, "showInDock": true, "keepDisplayOnByDefault": false, "wheelLines": 3, "pointerSpeed": 1.0])
+        defaults.register(defaults: ["showStatusItem": true, "showInDock": true, "keepDisplayOnByDefault": false, "wheelLines": 3, "pointerSpeed": PointerSettings.defaultSpeed])
         let statusItem = defaults.bool(forKey: "showStatusItem")
         showStatusItem = statusItem
         showInDock = defaults.bool(forKey: "showInDock") || !statusItem

@@ -3,8 +3,9 @@ import IOKit.hid
 import IOKit.hidsystem
 import PointerMath
 
-/// Ускорение и скорость указателя мыши (как в LinearMouse). Меняет свойства HID-службы каждой мыши через
-/// IOHIDServiceClient — разрешение не нужно. Тачпад не трогаем: у него тип ускорения HIDTrackpadAcceleration.
+/// Указатель мыши без ускорения и его скорость. Меняет свойства HID-службы каждой мыши через IOHIDServiceClient —
+/// разрешение не нужно: линейный режим (HIDUseLinearScalingMouseAcceleration = 1), в котором HIDMouseAcceleration —
+/// просто множитель скорости. Тачпад не трогаем: у него тип ускорения HIDTrackpadAcceleration.
 /// Свойства не сохраняются: сбрасываются при переподключении мыши, а ползунок «Скорость перемещения» в Системных настройках
 /// перезаписывает ускорение. Поэтому, пока настройка включена, раз в 2 с сверяем значения и ставим заново.
 @MainActor
@@ -16,10 +17,8 @@ final class MousePointer: ObservableObject {
 
     private let client = IOHIDEventSystemClientCreateSimpleClient(kCFAllocatorDefault)
     private var settings = PointerSettings()
-    /// Разрешение мыши до наших изменений (по RegistryID службы); nil внутри — у мыши свойство не было задано.
-    private var initialResolution: [UInt64: Double?] = [:]
-    /// Что мы сами записали в разрешение: у мышей на DriverKit (macOS 27.2) HIDPointerResolution не читается обратно.
-    private var writtenResolution: [UInt64: Double] = [:]
+    /// Какой режим мы записали мыши (по RegistryID службы): HIDUseLinearScalingMouseAcceleration со службы не читается.
+    private var writtenLinear: [UInt64: Bool] = [:]
     private var timer: Timer?
 
     private init() {
@@ -36,8 +35,7 @@ final class MousePointer: ObservableObject {
         timer = nil
         guard !settings.isDefault else {
             // Вернули как было — мыши уже получили исходные значения, дальше не следим
-            initialResolution = [:]
-            writtenResolution = [:]
+            writtenLinear = [:]
             return
         }
         let t = Timer(timeInterval: 2, repeats: true) { _ in
@@ -72,19 +70,18 @@ final class MousePointer: ObservableObject {
     private func sync() {
         let services = mouseServices()
         let system = fixed(IOHIDEventSystemClientCopyProperty(client, kIOHIDMouseAccelerationType as CFString)) ?? 0.5
+        // Через HID-клиент системный флаг не читается — берём из настройки, которую пишут Системные настройки
+        let systemLinear = UserDefaults.standard.bool(forKey: "com.apple.mouse.linear")
         for service in services {
             let id = (IOHIDServiceClientGetRegistryID(service) as? NSNumber)?.uint64Value ?? 0
-            if initialResolution[id] == nil {
-                initialResolution[id] = .some(fixed(IOHIDServiceClientCopyProperty(service, kIOHIDPointerResolutionKey as CFString)))
-            }
-            let target = PointerMath.targets(settings, systemAcceleration: system, initialResolution: initialResolution[id] ?? nil)
-            let resolution = fixed(IOHIDServiceClientCopyProperty(service, kIOHIDPointerResolutionKey as CFString))
-                ?? writtenResolution[id] ?? initialResolution[id].flatMap { $0 } ?? PointerMath.defaultResolution
+            let target = PointerMath.targets(settings, systemAcceleration: system, systemLinear: systemLinear)
             let acceleration = fixed(IOHIDServiceClientCopyProperty(service, kIOHIDMouseAccelerationType as CFString))
-            if PointerMath.fixed(resolution) != PointerMath.fixed(target.resolution) {
-                set(service, kIOHIDPointerResolutionKey, target.resolution)
-                writtenResolution[id] = target.resolution
-                // Новое разрешение вступает в силу только после повторной записи ускорения
+            // Флаг со службы не читается — сравниваем с тем, что записали сами; при сбросе пишем системный
+            if writtenLinear[id] != target.linear {
+                _ = IOHIDServiceClientSetProperty(service, kIOHIDUseLinearScalingMouseAccelerationKey as CFString,
+                                                  NSNumber(value: target.linear ? 1 : 0))
+                writtenLinear[id] = target.linear
+                // Режим вступает в силу после записи ускорения
                 set(service, kIOHIDMouseAccelerationType, target.acceleration)
             } else if acceleration.map(PointerMath.fixed) != PointerMath.fixed(target.acceleration) {
                 set(service, kIOHIDMouseAccelerationType, target.acceleration)

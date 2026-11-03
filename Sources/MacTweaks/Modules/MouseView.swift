@@ -37,31 +37,29 @@ struct MouseView: View {
 
             Section {
                 Toggle("Без ускорения (как в Windows)", isOn: $settings.pointerLinear)
-                Text("Курсор сдвигается строго пропорционально движению мыши: медленное и быстрое движение на одно и то же расстояние уводят курсор одинаково. Ползунок «Скорость перемещения» в Системных настройках при этом на мышь не влияет — скорость задаётся ниже.")
+                Text("Курсор сдвигается строго пропорционально движению мыши: медленное и быстрое движение на одно и то же расстояние уводят курсор одинаково.")
                     .font(.callout).foregroundStyle(.secondary)
 
                 LabeledContent("Скорость указателя") {
                     HStack {
                         Slider(value: $settings.pointerSpeed, in: PointerSettings.speedRange, step: 0.1)
                             .frame(minWidth: 180)
-                        Text(String(format: "×%.1f", settings.pointerSpeed))
+                        Text(String(format: "%.1f", settings.pointerSpeed))
                             .monospacedDigit()
-                            .frame(width: 40, alignment: .trailing)
+                            .frame(width: 32, alignment: .trailing)
                     }
                 }
-                Text("×1,0 — как у мыши в системе, больше — быстрее.")
+                .disabled(!settings.pointerLinear)
+                Text("Работает в режиме без ускорения и заменяет для мыши ползунок «Скорость перемещения» из Системных настроек. Меняется сразу — подвигайте и подберите удобную.")
                     .font(.callout).foregroundStyle(.secondary)
 
                 HStack {
                     LabeledContent("Мыши", value: pointer.mice.isEmpty ? "не подключены" : pointer.mice.joined(separator: ", "))
                     Spacer()
-                    Button("Сбросить к системным") {
-                        settings.pointerLinear = false
-                        settings.pointerSpeed = 1
-                    }
-                    .disabled(settings.pointerSettings.isDefault)
+                    Button("Сбросить к системным") { settings.pointerLinear = false }
+                        .disabled(!settings.pointerLinear)
                 }
-                Text("Только для мышей: тачпад не меняется. Разрешение не нужно. Работает, пока Mac Tweaks запущен; при выходе из приложения мыши возвращаются к системным значениям.")
+                Text("Только для мышей: тачпад не меняется. Разрешение не нужно. Работает, пока Mac Tweaks запущен; при выходе из приложения мыши возвращаются к системному поведению.")
                     .font(.callout).foregroundStyle(.secondary)
             } header: {
                 Text("Указатель мыши")

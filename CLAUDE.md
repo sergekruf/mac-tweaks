@@ -15,7 +15,7 @@
   (listen-only → «Мониторинг ввода», активный tap → «Универсальный доступ»); `RunningApps` — какие приложения запущены. Новый перехват — через него.
 - `Sources/MacTweaks/MouseScroller.swift` — колесо мыши: активный tap на `scrollWheel`. Решение «что сделать с дельтами» — в таргете
   `Sources/ScrollWheel` (без зависимостей от системы), тесты — `Tests/ScrollWheelTests`. Порядок записи полей: строки → FixedPt → Point (см. журнал).
-- `Sources/MacTweaks/MousePointer.swift` — указатель мыши: свойства HID-службы через `IOHIDServiceClientSetProperty` (без разрешений),
+- `Sources/MacTweaks/MousePointer.swift` — указатель мыши: линейный режим и скорость через `IOHIDServiceClientSetProperty` (без разрешений),
   сверка раз в 2 с. Целевые значения — в таргете `Sources/PointerMath`, тесты — `Tests/PointerMathTests`.
 - `Sources/MacTweaks/Shell.swift` — `GlobalDefaults` (чтение/запись `-globalDomain` через CFPreferences, уровни any/currentHost) и `Shell` (запуск процессов, `killall`).
 - `Resources/Info.plist`, `Resources/AppIcon.icns` — копируются в бандл скриптом сборки.
