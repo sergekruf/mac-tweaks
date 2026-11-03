@@ -1,3 +1,10 @@
 .build/
 dist/
 .DS_Store
+design/icon/concept-*.png
+design/icon/wrench-*.png
+design/icon/icon-concept-*.png
+design/icon/icon-wrench-*.png
+design/icon/icon-[0-9]-*.png
+design/icon/compare.png
+design/icon/compare-wrench.png

@@ -9,7 +9,8 @@
 - `Sources/MacTweaks/App.swift` — точка входа и `enum TweakModule`: каждый кейс — раздел в боковом меню.
 - `Sources/MacTweaks/Modules/` — по одному файлу на модуль: модель (`ObservableObject`) + вью.
 - `Sources/MacTweaks/Shell.swift` — `GlobalDefaults` (чтение/запись `-globalDomain` через CFPreferences, уровни any/currentHost) и `Shell` (запуск процессов, `killall`).
-- `Resources/Info.plist` — копируется в бандл скриптом сборки.
+- `Resources/Info.plist`, `Resources/AppIcon.icns` — копируются в бандл скриптом сборки.
+- `design/icon/icon.swift` — исходник иконки (вектор, сетка Apple 824/1024). Правка: поменять числа → `swift icon.swift .` → пересобрать `.icns` через `sips` + `iconutil` из `icon-v1.png`.
 
 ## Сборка
 
