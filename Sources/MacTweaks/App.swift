@@ -1,13 +1,17 @@
 import SwiftUI
 
+/// Запуск без SwiftUI App: при одной сцене Settings SwiftUI сам открывает пустое окно настроек.
+/// Главное окно, значок в строке меню и меню приложения ведёт AppDelegate.
 @main
-struct MacTweaksApp: App {
-    var body: some Scene {
-        WindowGroup("Mac Tweaks") {
-            ContentView()
-                .frame(minWidth: 760, minHeight: 520)
-        }
-        .windowResizability(.contentMinSize)
+@MainActor
+enum MacTweaksMain {
+    static let delegate = AppDelegate()
+
+    static func main() {
+        let app = NSApplication.shared
+        app.delegate = delegate
+        app.mainMenu = delegate.makeMainMenu()
+        app.run()
     }
 }
 
@@ -15,6 +19,7 @@ struct MacTweaksApp: App {
 enum TweakModule: String, CaseIterable, Identifiable {
     case menuBar
     case dock
+    case app
 
     var id: String { rawValue }
 
@@ -22,6 +27,7 @@ enum TweakModule: String, CaseIterable, Identifiable {
         switch self {
         case .menuBar: "Строка меню"
         case .dock: "Dock"
+        case .app: "Приложение"
         }
     }
 
@@ -29,6 +35,7 @@ enum TweakModule: String, CaseIterable, Identifiable {
         switch self {
         case .menuBar: "menubar.rectangle"
         case .dock: "dock.rectangle"
+        case .app: "app.badge"
         }
     }
 
@@ -36,6 +43,7 @@ enum TweakModule: String, CaseIterable, Identifiable {
         switch self {
         case .menuBar: MenuBarSpacingView()
         case .dock: DockView()
+        case .app: AppSettingsView()
         }
     }
 }
