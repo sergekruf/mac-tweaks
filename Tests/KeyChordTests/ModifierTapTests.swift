@@ -36,6 +36,27 @@ final class ModifierTapTests: XCTestCase {
         XCTAssertEqual(fires([m(.leftCommand), .otherKey, m(.leftCommand, .leftShift), m(.leftCommand), m()]), 0)
     }
 
+    /// Cmd↓ Shift↓ Cmd↑ — язык меняется сразу, пока Shift ещё зажат; Shift+2 после этого уже не мешает.
+    func testFiresWhenOnlyShiftRemains() {
+        var d = ModifierTapDetector(chord: .commandShift)
+        XCTAssertFalse(d.handle(m(.leftCommand)))
+        XCTAssertFalse(d.handle(m(.leftCommand, .leftShift)))
+        XCTAssertTrue(d.handle(m(.leftShift)))
+        XCTAssertFalse(d.handle(.otherKey))
+        XCTAssertFalse(d.handle(m()))
+        // Следующее нажатие снова работает
+        XCTAssertEqual(fires([m(.leftShift), m(.leftShift, .rightCommand), m(.leftShift), .otherKey, m()]), 1)
+    }
+
+    /// Если зажатым остался Cmd — ждём полного отпускания (иначе сломается Cmd+Shift, затем Cmd+Tab).
+    func testWaitsWhileCommandHeld() {
+        var d = ModifierTapDetector(chord: .commandShift)
+        XCTAssertFalse(d.handle(m(.leftCommand)))
+        XCTAssertFalse(d.handle(m(.leftCommand, .leftShift)))
+        XCTAssertFalse(d.handle(m(.leftCommand)))
+        XCTAssertTrue(d.handle(m()))
+    }
+
     func testSingleModifierDoesNothing() {
         XCTAssertEqual(fires([m(.leftShift), m()]), 0)
         XCTAssertEqual(fires([m(.rightCommand), m()]), 0)
