@@ -18,7 +18,7 @@ if security find-identity -p codesigning | grep -qF "\"$IDENTITY\""; then
   echo "Подпись: $IDENTITY"
 else
   codesign --force --sign - "$APP"
-  echo "Подпись: ad-hoc (сертификата «$IDENTITY» нет — разрешения слетят после пересборки, см. CLAUDE.md)"
+  echo "Подпись: ad-hoc (сертификата «${IDENTITY}» нет — разрешения слетят после пересборки, см. CLAUDE.md)"
 fi
 echo "Собрано: $APP"
 

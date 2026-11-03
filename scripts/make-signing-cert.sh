@@ -9,7 +9,7 @@ NAME="${1:-Mac Tweaks Dev}"
 KEYCHAIN="$HOME/Library/Keychains/login.keychain-db"
 
 if security find-identity -p codesigning | grep -qF "\"$NAME\""; then
-  echo "Сертификат «$NAME» уже есть — ничего не делаю."
+  echo "Сертификат «${NAME}» уже есть — ничего не делаю."
   exit 0
 fi
 
@@ -39,4 +39,4 @@ P12PASS=$(uuidgen)
 # -T: codesign может брать ключ без запроса доступа
 security import "$TMP/cert.p12" -k "$KEYCHAIN" -P "$P12PASS" -T /usr/bin/codesign
 
-security find-identity -p codesigning | grep -F "\"$NAME\"" && echo "Готово: «$NAME». Пересоберите ./build.sh --install."
+security find-identity -p codesigning | grep -F "\"$NAME\"" && echo "Готово: «${NAME}». Пересоберите ./build.sh --install."

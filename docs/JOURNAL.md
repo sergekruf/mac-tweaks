@@ -42,7 +42,9 @@
 сертификат с `extendedKeyUsage = codeSigning` подписывает, даже будучи недоверенным (`CSSMERR_TP_NOT_TRUSTED`), а requirement
 становится `identifier "ru.tokarev.mactweaks" and certificate leaf = H"…"` — одинаковый у двух разных сборок.
 `build.sh` подписывает сертификатом «Mac Tweaks Dev» (или `MACTWEAKS_SIGN_IDENTITY`), если он есть, иначе ad-hoc с предупреждением.
-Скрипт `scripts/make-signing-cert.sh` создаёт сертификат в login keychain — запускает пользователь, сам я его не запускал.
+Скрипт `scripts/make-signing-cert.sh` создаёт сертификат в login keychain — пользователь запустил сам, сертификат создан.
+Грабли: `"$NAME»"` под `set -u` падал с `NAME…: unbound variable` — bash в UTF-8 локали принял `»` за часть имени
+переменной; нужно `${NAME}`. После этого `./build.sh` подписал «Mac Tweaks Dev», requirement — `certificate leaf = H"74b5…"`.
 
 **Проверено.** `swift test` — 9/9. `./build.sh --install` без ошибок и предупреждений, запуск: раздел «Клавиатура» открывается,
 «не разрешён», заметка про CommandShift показывается (он запущен), раскладки «Russian – PC (сейчас), U.S.».
