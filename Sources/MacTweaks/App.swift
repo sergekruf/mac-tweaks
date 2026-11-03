@@ -21,6 +21,7 @@ enum TweakModule: String, CaseIterable, Identifiable {
     case dock
     case keyboard
     case mouse
+    case keepAwake
     case app
 
     var id: String { rawValue }
@@ -31,7 +32,8 @@ enum TweakModule: String, CaseIterable, Identifiable {
         case .dock: "Dock"
         case .keyboard: "Клавиатура"
         case .mouse: "Мышь"
-        case .app: "Приложение"
+        case .keepAwake: "Не засыпать"
+        case .app: "Настройки"
         }
     }
 
@@ -41,7 +43,8 @@ enum TweakModule: String, CaseIterable, Identifiable {
         case .dock: "dock.rectangle"
         case .keyboard: "keyboard"
         case .mouse: "computermouse"
-        case .app: "app.badge"
+        case .keepAwake: "cup.and.saucer"
+        case .app: "gearshape"
         }
     }
 
@@ -51,6 +54,7 @@ enum TweakModule: String, CaseIterable, Identifiable {
         case .dock: DockView()
         case .keyboard: KeyboardView()
         case .mouse: MouseView()
+        case .keepAwake: KeepAwakeView()
         case .app: AppSettingsView()
         }
     }

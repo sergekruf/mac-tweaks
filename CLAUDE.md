@@ -7,7 +7,7 @@
 
 - Swift Package, без Xcode-проекта. macOS 14+, не sandbox (пишет глобальные defaults, перезапускает системные процессы).
 - `Sources/MacTweaks/App.swift` — точка входа и `enum TweakModule`: каждый кейс — раздел в боковом меню.
-- `Sources/MacTweaks/AppDelegate.swift` — запуск без SwiftUI `App`: главное окно (`NSWindow`, закрытие не завершает приложение), меню приложения, значок в строке меню и его меню. `KeepAwake.swift` — режим «не засыпать» (IOPMAssertion), `WrenchGlyph.swift` — значок строки меню из геометрии `icon.swift`.
+- `Sources/MacTweaks/AppDelegate.swift` — запуск без SwiftUI `App`: главное окно (`NSWindow`, закрытие не завершает приложение), меню приложения, значок в строке меню и его меню. `KeepAwake.swift` — режим «не засыпать» (IOPMAssertion), `WrenchGlyph.swift` — значок строки меню из геометрии `icon.swift`. Раздел «Не засыпать» — `Modules/KeepAwakeView.swift`, настройки самого приложения (Dock, строка меню, запуск при входе) — `Modules/AppSettingsView.swift`, раздел «Настройки».
 - `Sources/MacTweaks/Modules/` — по одному файлу на модуль: модель (`ObservableObject`) + вью.
 - `Sources/MacTweaks/LayoutSwitcher.swift` — смена языка по сочетанию: listen-only CGEventTap + `TISSelectInputSource`.
   Логика «нажали-отпустили без других клавиш» — в таргете `Sources/KeyChord` (без зависимостей от системы), тесты — `Tests/KeyChordTests`.
