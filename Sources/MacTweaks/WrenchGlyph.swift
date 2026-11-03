@@ -34,23 +34,25 @@ enum WrenchGlyph {
     }
 
     /// Обычный режим — ключ. Режим «не засыпать» — залитая плитка с ключом-прорезью, как у иконки приложения.
+    /// Ключ в обоих режимах одного размера и на одном месте, меняется только фон.
     static func statusImage(active: Bool) -> NSImage {
         let image = NSImage(size: NSSize(width: 18, height: 18), flipped: false) { rect in
             guard let ctx = NSGraphicsContext.current?.cgContext else { return false }
+            let tile = rect.insetBy(dx: 1, dy: 1)
+            let glyphRect = tile.insetBy(dx: 2.6, dy: 2.6)
             ctx.setFillColor(.black)
             ctx.beginTransparencyLayer(auxiliaryInfo: nil)
             if active {
-                let tile = rect.insetBy(dx: 1, dy: 1)
                 let tilePath = RoundedRectangle(cornerRadius: tile.width * 0.27, style: .continuous).path(in: tile).cgPath
                 ctx.addPath(tilePath); ctx.fillPath()
-                let (solid, cuts) = fitted(in: tile.insetBy(dx: 2.6, dy: 2.6))
+                let (solid, cuts) = fitted(in: glyphRect)
                 ctx.setBlendMode(.clear)
                 ctx.addPath(solid); ctx.fillPath()
                 ctx.setBlendMode(.normal)
                 ctx.addPath(tilePath); ctx.clip()
                 ctx.addPath(cuts); ctx.fillPath()
             } else {
-                let (solid, cuts) = fitted(in: rect.insetBy(dx: 1, dy: 1))
+                let (solid, cuts) = fitted(in: glyphRect)
                 ctx.addPath(solid); ctx.fillPath()
                 ctx.setBlendMode(.clear)
                 ctx.addPath(cuts); ctx.fillPath()
