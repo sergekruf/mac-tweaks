@@ -52,6 +52,16 @@ final class WindowsCurveTests: XCTestCase {
         }
     }
 
+    func testStrengthScalesAcceleration() {
+        let fast = 100_000.0
+        XCTAssertEqual(WindowsCurve.multiplier(countsPerSecond: fast, base: 1, strength: 0), 1)
+        let full = WindowsCurve.relativeGain(windowsSpeed: 40)
+        // Половина силы — половина прибавки, с точностью до ступени
+        let half = WindowsCurve.multiplier(countsPerSecond: fast, base: 1, strength: 0.5)
+        XCTAssertLessThan(abs(log(half / (1 + 0.5 * (full - 1)))), log(WindowsCurve.stepRatio) / 2 + 0.0001)
+        XCTAssertLessThan(half, WindowsCurve.multiplier(countsPerSecond: fast, base: 1, strength: 1))
+    }
+
     func testMultiplierIsSteppedAndClamped() {
         let m = WindowsCurve.multiplier(countsPerSecond: 1000, base: 0.6)
         let steps = log(m / 0.6) / log(WindowsCurve.stepRatio)
@@ -75,6 +85,21 @@ final class MotionSpeedTests: XCTestCase {
         var s = MotionSpeed()
         for i in 0..<40 { s.add(dx: 3, dy: 4, time: Double(i) * 0.008) }
         XCTAssertEqual(s.countsPerSecond, 625, accuracy: 6)
+    }
+
+    func testSlowsDownFasterThanSpeedsUp() {
+        var s = MotionSpeed()
+        for i in 0..<40 { s.add(dx: 40, dy: 0, time: Double(i) * 0.008) }
+        let fast = s.countsPerSecond
+        // Резкое торможение у цели: через два отчёта скорость уже почти медленная
+        s.add(dx: 1, dy: 0, time: 40 * 0.008)
+        s.add(dx: 1, dy: 0, time: 41 * 0.008)
+        XCTAssertLessThan(s.countsPerSecond, fast * 0.1)
+        // А разгон с нуля за те же два отчёта — меньше половины
+        var up = MotionSpeed()
+        up.add(dx: 40, dy: 0, time: 0)
+        up.add(dx: 40, dy: 0, time: 0.008)
+        XCTAssertLessThan(up.countsPerSecond, fast * 0.5)
     }
 
     func testStartsSlowAndRestartsAfterPause() {

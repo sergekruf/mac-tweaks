@@ -117,14 +117,16 @@ final class MousePointer: ObservableObject {
     }
 
     /// Каждая запись пересобирает ускоритель в WindowServer и пишет строку в системный лог, а при движении ступень
-    /// меняется ~50 раз в секунду (проверено) — поэтому в движении пишем не чаще раза в 40 мс.
+    /// меняется ~50 раз в секунду (проверено) — поэтому разгон пишем не чаще раза в 40 мс. Торможение — сразу,
+    /// иначе курсор проскакивает цель.
     private static let minWriteInterval = 0.04
     private var lastWrite: UInt64 = 0
 
     private func setMultiplier(_ value: Double, force: Bool = false) {
         guard value != multiplier else { return }
         let now = mach_absolute_time()
-        guard force || seconds(now - lastWrite) >= Self.minWriteInterval else { return }
+        let slowingDown = multiplier.map { value < $0 } ?? true
+        guard force || slowingDown || seconds(now - lastWrite) >= Self.minWriteInterval else { return }
         lastWrite = now
         multiplier = value
         for service in services { set(service, value) }
@@ -186,7 +188,7 @@ final class MousePointer: ObservableObject {
         guard let p = pending, manager != nil else { return }
         pending = nil
         let cps = speed.add(dx: p.dx, dy: p.dy, time: seconds(p.time))
-        setMultiplier(WindowsCurve.multiplier(countsPerSecond: cps, base: settings.windowsSpeed))
+        setMultiplier(WindowsCurve.multiplier(countsPerSecond: cps, base: settings.windowsSpeed, strength: settings.windowsStrength))
     }
 
     /// Последний отчёт движения не ждёт следующего; после паузы множитель возвращается к «медленному».

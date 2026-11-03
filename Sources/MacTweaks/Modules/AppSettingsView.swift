@@ -56,9 +56,12 @@ final class AppSettings: ObservableObject {
     @Published var pointerWindowsSpeed: Double {
         didSet { defaults.set(pointerWindowsSpeed, forKey: "pointerWindowsSpeed"); MousePointer.shared.apply(pointerSettings) }
     }
+    @Published var pointerWindowsStrength: Double {
+        didSet { defaults.set(pointerWindowsStrength, forKey: "pointerWindowsStrength"); MousePointer.shared.apply(pointerSettings) }
+    }
 
     var pointerSettings: PointerSettings {
-        PointerSettings(mode: pointerMode, speed: pointerSpeed, windowsSpeed: pointerWindowsSpeed)
+        PointerSettings(mode: pointerMode, speed: pointerSpeed, windowsSpeed: pointerWindowsSpeed, windowsStrength: pointerWindowsStrength)
     }
 
     var scrollSettings: ScrollSettings {
@@ -68,7 +71,7 @@ final class AppSettings: ObservableObject {
     var onChange: (() -> Void)?
 
     private init() {
-        defaults.register(defaults: ["showStatusItem": true, "showInDock": true, "keepDisplayOnByDefault": false, "wheelLines": 3, "pointerSpeed": PointerSettings.defaultSpeed, "pointerWindowsSpeed": PointerSettings.defaultWindowsSpeed])
+        defaults.register(defaults: ["showStatusItem": true, "showInDock": true, "keepDisplayOnByDefault": false, "wheelLines": 3, "pointerSpeed": PointerSettings.defaultSpeed, "pointerWindowsSpeed": PointerSettings.defaultWindowsSpeed, "pointerWindowsStrength": PointerSettings.defaultWindowsStrength])
         let statusItem = defaults.bool(forKey: "showStatusItem")
         showStatusItem = statusItem
         showInDock = defaults.bool(forKey: "showInDock") || !statusItem
@@ -79,6 +82,7 @@ final class AppSettings: ObservableObject {
         // Раньше был только переключатель «Без ускорения» (pointerLinear)
         pointerMode = defaults.string(forKey: "pointerMode").flatMap(PointerMode.init)
             ?? (defaults.bool(forKey: "pointerLinear") ? .linear : .system)
+        pointerWindowsStrength = min(max(defaults.double(forKey: "pointerWindowsStrength"), 0), 1)
         pointerWindowsSpeed = min(max(defaults.double(forKey: "pointerWindowsSpeed"), PointerSettings.windowsSpeedRange.lowerBound),
                                   PointerSettings.windowsSpeedRange.upperBound)
         pointerSpeed = min(max(defaults.double(forKey: "pointerSpeed"), PointerSettings.speedRange.lowerBound), PointerSettings.speedRange.upperBound)

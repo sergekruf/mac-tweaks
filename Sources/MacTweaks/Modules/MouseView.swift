@@ -52,6 +52,17 @@ struct MouseView: View {
                     speedSlider("Скорость указателя", value: $settings.pointerSpeed, in: PointerSettings.speedRange)
                 case .windows:
                     speedSlider("Скорость на медленных движениях", value: $settings.pointerWindowsSpeed, in: PointerSettings.windowsSpeedRange)
+                    LabeledContent("Сила ускорения") {
+                        HStack {
+                            Slider(value: $settings.pointerWindowsStrength, in: PointerSettings.windowsStrengthRange, step: 0.05)
+                                .frame(minWidth: 180)
+                            Text("\(Int((settings.pointerWindowsStrength * 100).rounded())) %")
+                                .monospacedDigit()
+                                .frame(width: 40, alignment: .trailing)
+                        }
+                    }
+                    Text("100 % — как в Windows: на быстрых движениях курсор разгоняется до ~4,5 раза. Меньше — мягче разгон и меньше промахов при подходе к цели; 0 % — без ускорения.")
+                        .font(.callout).foregroundStyle(.secondary)
                     if !pointer.motionPermission {
                         Text("Нужен «Мониторинг ввода»: без него Mac Tweaks не видит скорость мыши. Включите Mac Tweaks в Системных настройках → Конфиденциальность и безопасность → Мониторинг ввода.")
                             .font(.callout).foregroundStyle(.red)
@@ -132,7 +143,7 @@ struct MouseView: View {
         case .linear:
             "Курсор сдвигается строго пропорционально движению мыши: медленное и быстрое движение на одно и то же расстояние уводят курсор одинаково."
         case .windows:
-            "Как «Повышенная точность указателя» в Windows: при медленном движении курсор идёт медленно и точно — легко попасть в мелкую кнопку, при быстром разгоняется (до ~4,5 раза), чтобы пересечь экран коротким движением."
+            "Как «Повышенная точность указателя» в Windows: при медленном движении курсор идёт медленно и точно — легко попасть в мелкую кнопку, при быстром разгоняется, чтобы пересечь экран коротким движением. Как только движение замедляется у цели, курсор сразу снова медленный."
         }
     }
 

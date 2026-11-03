@@ -19,16 +19,23 @@ public struct PointerSettings: Equatable {
     public var speed: Double
     /// Множитель на медленных движениях в режиме «Как в Windows»; на быстрых он растёт по кривой Windows.
     public var windowsSpeed: Double
+    /// Сила ускорения в режиме «Как в Windows»: 1 — как в Windows, 0 — без ускорения.
+    public var windowsStrength: Double
 
     public static let speedRange = 0.2...5.0
     public static let defaultSpeed = 1.5
     public static let windowsSpeedRange = 0.2...2.0
     public static let defaultWindowsSpeed = 0.6
+    public static let windowsStrengthRange = 0.0...1.0
+    /// В Windows разгон до ~4,5 раза пользователю показался слишком сильным — по умолчанию половина.
+    public static let defaultWindowsStrength = 0.5
 
-    public init(mode: PointerMode = .system, speed: Double = defaultSpeed, windowsSpeed: Double = defaultWindowsSpeed) {
+    public init(mode: PointerMode = .system, speed: Double = defaultSpeed, windowsSpeed: Double = defaultWindowsSpeed,
+                windowsStrength: Double = defaultWindowsStrength) {
         self.mode = mode
         self.speed = speed
         self.windowsSpeed = windowsSpeed
+        self.windowsStrength = windowsStrength
     }
 
     /// Ничего не меняем — у мыши системные значения.

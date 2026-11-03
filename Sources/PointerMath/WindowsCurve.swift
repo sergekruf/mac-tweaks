@@ -32,8 +32,10 @@ public enum WindowsCurve {
     }
 
     /// Множитель HIDMouseAcceleration для текущей скорости мыши.
-    public static func multiplier(countsPerSecond: Double, base: Double) -> Double {
-        let gain = relativeGain(windowsSpeed: windowsSpeed(countsPerSecond: countsPerSecond))
+    /// - Parameter strength: сила ускорения: 1 — как в Windows (до ~4,5 раза), 0 — без ускорения, между — пропорционально.
+    public static func multiplier(countsPerSecond: Double, base: Double, strength: Double = 1) -> Double {
+        let full = relativeGain(windowsSpeed: windowsSpeed(countsPerSecond: countsPerSecond))
+        let gain = 1 + min(max(strength, 0), 1) * (full - 1)
         let steps = (log(gain) / log(stepRatio)).rounded()
         return min(base * pow(stepRatio, steps), maxMultiplier)
     }
@@ -41,12 +43,15 @@ public enum WindowsCurve {
 
 /// Сглаженная скорость мыши по сырым отсчётам. Пауза дольше `idle` — новое движение, скорость начинается с нуля,
 /// поэтому первые отсчёты после остановки идут с «медленным» множителем — для точного наведения.
+/// Разгон сглаживается медленнее, торможение — почти сразу: иначе при подходе к цели курсор ещё летит с большим
+/// множителем и проскакивает её (так было с одной постоянной 30 мс).
 public struct MotionSpeed {
     public private(set) var countsPerSecond: Double = 0
     private var lastTime: Double?
 
-    /// Постоянная сглаживания, с.
-    public static let smoothing = 0.03
+    /// Постоянные сглаживания при разгоне и торможении, с.
+    public static let smoothingUp = 0.03
+    public static let smoothingDown = 0.006
     /// Пауза, после которой движение считается новым, с.
     public static let idle = 0.08
     /// Интервал отчётов мыши по умолчанию (125 Гц) — для первого отсчёта движения.
@@ -67,7 +72,8 @@ public struct MotionSpeed {
         }
         lastTime = time
         let instant = (dx * dx + dy * dy).squareRoot() / dt
-        countsPerSecond += (1 - exp(-dt / Self.smoothing)) * (instant - countsPerSecond)
+        let tau = instant > countsPerSecond ? Self.smoothingUp : Self.smoothingDown
+        countsPerSecond += (1 - exp(-dt / tau)) * (instant - countsPerSecond)
         return countsPerSecond
     }
 
