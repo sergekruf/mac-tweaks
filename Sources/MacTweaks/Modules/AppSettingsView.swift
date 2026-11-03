@@ -1,3 +1,4 @@
+import PointerMath
 import ScrollWheel
 import ServiceManagement
 import SwiftUI
@@ -45,6 +46,17 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(wheelLines, forKey: "wheelLines"); MouseScroller.shared.apply(scrollSettings) }
     }
     static let wheelLinesRange = 1...10
+    /// Указатель мыши: без ускорения и множитель скорости (1 — как в системе).
+    @Published var pointerLinear: Bool {
+        didSet { defaults.set(pointerLinear, forKey: "pointerLinear"); MousePointer.shared.apply(pointerSettings) }
+    }
+    @Published var pointerSpeed: Double {
+        didSet { defaults.set(pointerSpeed, forKey: "pointerSpeed"); MousePointer.shared.apply(pointerSettings) }
+    }
+
+    var pointerSettings: PointerSettings {
+        PointerSettings(disableAcceleration: pointerLinear, speed: pointerSpeed)
+    }
 
     var scrollSettings: ScrollSettings {
         ScrollSettings(reverseWheel: reverseWheel, linesPerNotch: linearWheel ? wheelLines : nil)
@@ -53,7 +65,7 @@ final class AppSettings: ObservableObject {
     var onChange: (() -> Void)?
 
     private init() {
-        defaults.register(defaults: ["showStatusItem": true, "showInDock": true, "keepDisplayOnByDefault": false, "wheelLines": 3])
+        defaults.register(defaults: ["showStatusItem": true, "showInDock": true, "keepDisplayOnByDefault": false, "wheelLines": 3, "pointerSpeed": 1.0])
         let statusItem = defaults.bool(forKey: "showStatusItem")
         showStatusItem = statusItem
         showInDock = defaults.bool(forKey: "showInDock") || !statusItem
@@ -61,6 +73,8 @@ final class AppSettings: ObservableObject {
         layoutHotkey = defaults.string(forKey: "layoutHotkey").flatMap(LayoutHotkey.init) ?? .off
         reverseWheel = defaults.bool(forKey: "reverseWheel")
         linearWheel = defaults.bool(forKey: "linearWheel")
+        pointerLinear = defaults.bool(forKey: "pointerLinear")
+        pointerSpeed = min(max(defaults.double(forKey: "pointerSpeed"), PointerSettings.speedRange.lowerBound), PointerSettings.speedRange.upperBound)
         wheelLines = min(max(defaults.integer(forKey: "wheelLines"), Self.wheelLinesRange.lowerBound), Self.wheelLinesRange.upperBound)
     }
 }
