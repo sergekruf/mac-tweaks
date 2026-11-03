@@ -135,7 +135,7 @@ struct DockView: View {
                 SpacerRow(title: "Среди приложений", hint: "Левая часть Dock, до разделителя") { spacer in
                     model.add(spacer, to: .apps)
                 }
-                SpacerRow(title: "В правой части", hint: "Папки, стопки и корзина. На macOS 27 может не работать — проверьте.") { spacer in
+                SpacerRow(title: "В правой части", hint: "Папки, стопки и корзина") { spacer in
                     model.add(spacer, to: .others)
                 }
                 Text("Пробел появляется в конце выбранной части Dock. Перетащите его мышью на нужное место, как обычный значок. Лишний пробел можно вытащить из Dock, как любой значок.")
