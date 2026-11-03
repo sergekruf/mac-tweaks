@@ -38,8 +38,9 @@ enum WrenchGlyph {
     static func statusImage(active: Bool) -> NSImage {
         let image = NSImage(size: NSSize(width: 18, height: 18), flipped: false) { rect in
             guard let ctx = NSGraphicsContext.current?.cgContext else { return false }
-            let tile = rect.insetBy(dx: 1, dy: 1)
-            let glyphRect = tile.insetBy(dx: 2.6, dy: 2.6)
+            // Ключ 14 pt — по высоте как соседние значки; плитка занимает весь значок, поле вокруг ключа 2 pt
+            let tile = rect
+            let glyphRect = tile.insetBy(dx: 2, dy: 2)
             ctx.setFillColor(.black)
             ctx.beginTransparencyLayer(auxiliaryInfo: nil)
             if active {
