@@ -1,3 +1,5 @@
+import PointerMath
+import ScrollWheel
 import ServiceManagement
 import SwiftUI
 
@@ -25,15 +27,55 @@ final class AppSettings: ObservableObject {
     @Published var keepDisplayOnByDefault: Bool {
         didSet { defaults.set(keepDisplayOnByDefault, forKey: "keepDisplayOnByDefault") }
     }
+    /// Сочетание для смены языка ввода (модуль «Клавиатура»), по умолчанию выключено.
+    @Published var layoutHotkey: LayoutHotkey {
+        didSet {
+            defaults.set(layoutHotkey.rawValue, forKey: "layoutHotkey")
+            LayoutSwitcher.shared.apply(layoutHotkey)
+        }
+    }
+
+    /// Модуль «Мышь»: обратить колесо и прокрутка по строкам, по умолчанию выключено.
+    @Published var reverseWheel: Bool {
+        didSet { defaults.set(reverseWheel, forKey: "reverseWheel"); MouseScroller.shared.apply(scrollSettings) }
+    }
+    @Published var linearWheel: Bool {
+        didSet { defaults.set(linearWheel, forKey: "linearWheel"); MouseScroller.shared.apply(scrollSettings) }
+    }
+    @Published var wheelLines: Int {
+        didSet { defaults.set(wheelLines, forKey: "wheelLines"); MouseScroller.shared.apply(scrollSettings) }
+    }
+    static let wheelLinesRange = 1...10
+    /// Указатель мыши: без ускорения и скорость в этом режиме.
+    @Published var pointerLinear: Bool {
+        didSet { defaults.set(pointerLinear, forKey: "pointerLinear"); MousePointer.shared.apply(pointerSettings) }
+    }
+    @Published var pointerSpeed: Double {
+        didSet { defaults.set(pointerSpeed, forKey: "pointerSpeed"); MousePointer.shared.apply(pointerSettings) }
+    }
+
+    var pointerSettings: PointerSettings {
+        PointerSettings(linear: pointerLinear, speed: pointerSpeed)
+    }
+
+    var scrollSettings: ScrollSettings {
+        ScrollSettings(reverseWheel: reverseWheel, linesPerNotch: linearWheel ? wheelLines : nil)
+    }
 
     var onChange: (() -> Void)?
 
     private init() {
-        defaults.register(defaults: ["showStatusItem": true, "showInDock": true, "keepDisplayOnByDefault": false])
+        defaults.register(defaults: ["showStatusItem": true, "showInDock": true, "keepDisplayOnByDefault": false, "wheelLines": 3, "pointerSpeed": PointerSettings.defaultSpeed])
         let statusItem = defaults.bool(forKey: "showStatusItem")
         showStatusItem = statusItem
         showInDock = defaults.bool(forKey: "showInDock") || !statusItem
         keepDisplayOnByDefault = defaults.bool(forKey: "keepDisplayOnByDefault")
+        layoutHotkey = defaults.string(forKey: "layoutHotkey").flatMap(LayoutHotkey.init) ?? .off
+        reverseWheel = defaults.bool(forKey: "reverseWheel")
+        linearWheel = defaults.bool(forKey: "linearWheel")
+        pointerLinear = defaults.bool(forKey: "pointerLinear")
+        pointerSpeed = min(max(defaults.double(forKey: "pointerSpeed"), PointerSettings.speedRange.lowerBound), PointerSettings.speedRange.upperBound)
+        wheelLines = min(max(defaults.integer(forKey: "wheelLines"), Self.wheelLinesRange.lowerBound), Self.wheelLinesRange.upperBound)
     }
 }
 
