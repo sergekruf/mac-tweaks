@@ -20,6 +20,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         awake.onChange = { [weak self] in self?.refreshStatusButton() }
         applyActivationPolicy()
         updateStatusItem()
+        // Перехват сочетания работает всё время, пока приложение запущено, и с закрытым окном
+        LayoutSwitcher.shared.apply(settings.layoutHotkey)
+        MouseScroller.shared.apply(settings.scrollSettings)
+        MousePointer.shared.apply(settings.pointerSettings)
         if !launchedAsLoginItem { showMainWindow() }
     }
 
@@ -33,6 +37,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         awake.stop()
+        // Свойства мыши живут в системе и после выхода — возвращаем системные
+        MousePointer.shared.restore()
     }
 
     private var launchedAsLoginItem: Bool {
