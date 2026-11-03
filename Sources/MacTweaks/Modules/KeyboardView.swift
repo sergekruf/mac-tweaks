@@ -4,6 +4,7 @@ import SwiftUI
 struct KeyboardView: View {
     @ObservedObject private var settings = AppSettings.shared
     @ObservedObject private var switcher = LayoutSwitcher.shared
+    @ObservedObject private var apps = RunningApps.shared
 
     var body: some View {
         Form {
@@ -19,7 +20,7 @@ struct KeyboardView: View {
                 if let error = switcher.lastError {
                     Text(error).font(.callout).foregroundStyle(.red)
                 }
-                if switcher.commandShiftRunning {
+                if apps.contains(bundleID: LayoutSwitcher.commandShiftBundleID, name: "CommandShift") {
                     Label("Запущен CommandShift. Если включить переключение и здесь, язык сменится дважды и вернётся обратно. Закройте CommandShift (значок в строке меню → Quit) или не включайте эту функцию.",
                           systemImage: "exclamationmark.triangle")
                         .font(.callout).foregroundStyle(.orange)

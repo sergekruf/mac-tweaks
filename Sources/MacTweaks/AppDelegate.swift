@@ -22,6 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         updateStatusItem()
         // Перехват сочетания работает всё время, пока приложение запущено, и с закрытым окном
         LayoutSwitcher.shared.apply(settings.layoutHotkey)
+        MouseScroller.shared.apply(settings.scrollSettings)
         if !launchedAsLoginItem { showMainWindow() }
     }
 

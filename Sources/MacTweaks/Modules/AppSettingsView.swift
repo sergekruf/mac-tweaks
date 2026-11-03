@@ -1,3 +1,4 @@
+import ScrollWheel
 import ServiceManagement
 import SwiftUI
 
@@ -33,15 +34,34 @@ final class AppSettings: ObservableObject {
         }
     }
 
+    /// Модуль «Мышь»: обратить колесо и прокрутка по строкам, по умолчанию выключено.
+    @Published var reverseWheel: Bool {
+        didSet { defaults.set(reverseWheel, forKey: "reverseWheel"); MouseScroller.shared.apply(scrollSettings) }
+    }
+    @Published var linearWheel: Bool {
+        didSet { defaults.set(linearWheel, forKey: "linearWheel"); MouseScroller.shared.apply(scrollSettings) }
+    }
+    @Published var wheelLines: Int {
+        didSet { defaults.set(wheelLines, forKey: "wheelLines"); MouseScroller.shared.apply(scrollSettings) }
+    }
+    static let wheelLinesRange = 1...10
+
+    var scrollSettings: ScrollSettings {
+        ScrollSettings(reverseWheel: reverseWheel, linesPerNotch: linearWheel ? wheelLines : nil)
+    }
+
     var onChange: (() -> Void)?
 
     private init() {
-        defaults.register(defaults: ["showStatusItem": true, "showInDock": true, "keepDisplayOnByDefault": false])
+        defaults.register(defaults: ["showStatusItem": true, "showInDock": true, "keepDisplayOnByDefault": false, "wheelLines": 3])
         let statusItem = defaults.bool(forKey: "showStatusItem")
         showStatusItem = statusItem
         showInDock = defaults.bool(forKey: "showInDock") || !statusItem
         keepDisplayOnByDefault = defaults.bool(forKey: "keepDisplayOnByDefault")
         layoutHotkey = defaults.string(forKey: "layoutHotkey").flatMap(LayoutHotkey.init) ?? .off
+        reverseWheel = defaults.bool(forKey: "reverseWheel")
+        linearWheel = defaults.bool(forKey: "linearWheel")
+        wheelLines = min(max(defaults.integer(forKey: "wheelLines"), Self.wheelLinesRange.lowerBound), Self.wheelLinesRange.upperBound)
     }
 }
 

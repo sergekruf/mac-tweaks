@@ -11,6 +11,10 @@
 - `Sources/MacTweaks/Modules/` — по одному файлу на модуль: модель (`ObservableObject`) + вью.
 - `Sources/MacTweaks/LayoutSwitcher.swift` — смена языка по сочетанию: listen-only CGEventTap + `TISSelectInputSource`.
   Логика «нажали-отпустили без других клавиш» — в таргете `Sources/KeyChord` (без зависимостей от системы), тесты — `Tests/KeyChordTests`.
+- `Sources/MacTweaks/EventTap.swift` — общий `EventTap` (создание, повторное включение, слежение за разрешением) и `EventTapPermission`
+  (listen-only → «Мониторинг ввода», активный tap → «Универсальный доступ»); `RunningApps` — какие приложения запущены. Новый перехват — через него.
+- `Sources/MacTweaks/MouseScroller.swift` — колесо мыши: активный tap на `scrollWheel`. Решение «что сделать с дельтами» — в таргете
+  `Sources/ScrollWheel` (без зависимостей от системы), тесты — `Tests/ScrollWheelTests`. Порядок записи полей: строки → FixedPt → Point (см. журнал).
 - `Sources/MacTweaks/Shell.swift` — `GlobalDefaults` (чтение/запись `-globalDomain` через CFPreferences, уровни any/currentHost) и `Shell` (запуск процессов, `killall`).
 - `Resources/Info.plist`, `Resources/AppIcon.icns` — копируются в бандл скриптом сборки.
 - `design/icon/icon.swift` — исходник иконки (вектор, сетка Apple 824/1024). Правка: поменять числа → `swift icon.swift .` → пересобрать `.icns` через `sips` + `iconutil` из `icon-v1.png`.
@@ -20,7 +24,7 @@
 ```bash
 ./build.sh            # собирает dist/MacTweaks.app (ad-hoc подпись)
 ./build.sh --install  # + копирует в ~/Applications
-swift test            # тесты KeyChord
+swift test            # тесты KeyChord и ScrollWheel
 ```
 
 ### Подпись и разрешения «Мониторинг ввода» / «Универсальный доступ»

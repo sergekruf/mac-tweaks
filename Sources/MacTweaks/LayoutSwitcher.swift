@@ -40,18 +40,17 @@ final class LayoutSwitcher: ObservableObject {
     static let shared = LayoutSwitcher()
     static let commandShiftBundleID = "vasybaran.loveFromUkraine.CommandShift"
 
-    @Published private(set) var hasPermission = CGPreflightListenEventAccess()
+    @Published private(set) var hasPermission = false
     @Published private(set) var isRunning = false
     @Published private(set) var sources: [InputSourceInfo] = []
     @Published private(set) var currentSourceID: String?
-    @Published private(set) var commandShiftRunning = false
     @Published private(set) var lastError: String?
 
-    private var hotkey: LayoutHotkey = .off
     private var detector: ModifierTapDetector?
-    private var tap: CFMachPort?
-    private var tapSource: CFRunLoopSource?
-    private var watchTimer: Timer?
+    private let tap = EventTap(types: [.flagsChanged, .keyDown, .leftMouseDown, .rightMouseDown, .otherMouseDown],
+                               options: .listenOnly, permission: .inputMonitoring) { type, event in
+        LayoutSwitcher.shared.handle(type, event)
+    }
 
     private init() {
         reloadSources()
@@ -61,94 +60,37 @@ final class LayoutSwitcher: ObservableObject {
                 MainActor.assumeIsolated { LayoutSwitcher.shared.reloadSources() }
             }
         }
-        let wnc = NSWorkspace.shared.notificationCenter
-        for name in [NSWorkspace.didLaunchApplicationNotification, NSWorkspace.didTerminateApplicationNotification] {
-            wnc.addObserver(forName: name, object: nil, queue: .main) { _ in
-                MainActor.assumeIsolated { LayoutSwitcher.shared.checkCommandShift() }
-            }
-        }
-        checkCommandShift()
+        tap.onChange = { [weak self] in self?.syncTapState() }
+        syncTapState()
     }
 
     /// Включить или выключить перехват под выбранное сочетание (вызывается при запуске и при смене настройки).
     func apply(_ hotkey: LayoutHotkey) {
-        self.hotkey = hotkey
-        stopTap()
-        watchTimer?.invalidate(); watchTimer = nil
+        tap.stop()
         guard let chord = hotkey.chord else { return }
         detector = ModifierTapDetector(chord: chord)
-        startTapIfPossible()
-        // Разрешение могут выдать или отозвать, пока приложение работает
-        let t = Timer(timeInterval: 2, repeats: true) { _ in
-            MainActor.assumeIsolated { LayoutSwitcher.shared.watchPermission() }
-        }
-        RunLoop.main.add(t, forMode: .common)
-        watchTimer = t
+        tap.start()
     }
 
-    /// Показывает системный запрос и добавляет Mac Tweaks в список «Мониторинга ввода».
-    func requestPermission() {
-        CGRequestListenEventAccess()
-        refreshPermission()
-    }
-
-    func openPrivacySettings() {
-        let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent")!
-        NSWorkspace.shared.open(url)
-    }
-
-    func refreshPermission() {
-        hasPermission = CGPreflightListenEventAccess()
-    }
+    func requestPermission() { tap.requestPermission() }
+    func openPrivacySettings() { tap.permission.openSettings() }
+    func refreshPermission() { tap.refreshPermission() }
 
     // MARK: - Перехват
 
-    private func watchPermission() {
-        refreshPermission()
-        if hasPermission && tap == nil {
-            startTapIfPossible()
-        } else if !hasPermission && tap != nil {
-            stopTap()
+    private func syncTapState() {
+        hasPermission = tap.hasPermission
+        if isRunning != tap.isRunning {
+            isRunning = tap.isRunning
+            detector?.reset()
         }
-    }
-
-    private func startTapIfPossible() {
-        refreshPermission()
-        guard hasPermission, tap == nil else { return }
-        let types: [CGEventType] = [.flagsChanged, .keyDown, .leftMouseDown, .rightMouseDown, .otherMouseDown]
-        let mask = types.reduce(CGEventMask(0)) { $0 | (1 << $1.rawValue) }
-        guard let port = CGEvent.tapCreate(tap: .cgSessionEventTap, place: .headInsertEventTap,
-                                           options: .listenOnly, eventsOfInterest: mask,
-                                           callback: tapCallback, userInfo: nil) else {
-            lastError = "Разрешение есть, но перехват не запустился. Перезапустите Mac Tweaks."
-            return
-        }
-        let source = CFMachPortCreateRunLoopSource(nil, port, 0)
-        CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
-        CGEvent.tapEnable(tap: port, enable: true)
-        tap = port
-        tapSource = source
-        detector?.reset()
-        lastError = nil
-        isRunning = true
-    }
-
-    private func stopTap() {
-        if let tap {
-            CGEvent.tapEnable(tap: tap, enable: false)
-            CFMachPortInvalidate(tap)
-        }
-        if let tapSource { CFRunLoopRemoveSource(CFRunLoopGetMain(), tapSource, .commonModes) }
-        tap = nil
-        tapSource = nil
-        isRunning = false
+        lastError = tap.lastError
     }
 
     fileprivate func handle(_ type: CGEventType, _ event: CGEvent) {
         switch type {
         case .tapDisabledByTimeout, .tapDisabledByUserInput:
-            // Система отключает медленный tap — включаем обратно и начинаем с чистого состояния
-            if let tap { CGEvent.tapEnable(tap: tap, enable: true) }
+            // Tap включён обратно — начинаем с чистого состояния
             detector?.reset()
         case .flagsChanged:
             if detector?.handle(.modifiers(Self.modifierKeys(event.flags))) == true {
@@ -211,19 +153,4 @@ final class LayoutSwitcher: ObservableObject {
         guard let ptr = TISGetInputSourceProperty(source, key) else { return nil }
         return Unmanaged<CFString>.fromOpaque(ptr).takeUnretainedValue() as String
     }
-
-    // MARK: - CommandShift
-
-    private func checkCommandShift() {
-        commandShiftRunning = NSWorkspace.shared.runningApplications.contains {
-            $0.bundleIdentifier == Self.commandShiftBundleID || $0.localizedName == "CommandShift"
-        }
-    }
-}
-
-/// Tap добавлен в главный run loop, поэтому колбэк приходит на главном потоке.
-private func tapCallback(proxy: CGEventTapProxy, type: CGEventType, event: CGEvent,
-                         userInfo: UnsafeMutableRawPointer?) -> Unmanaged<CGEvent>? {
-    MainActor.assumeIsolated { LayoutSwitcher.shared.handle(type, event) }
-    return Unmanaged.passUnretained(event)
 }
