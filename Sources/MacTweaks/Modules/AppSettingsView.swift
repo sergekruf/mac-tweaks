@@ -25,6 +25,13 @@ final class AppSettings: ObservableObject {
     @Published var keepDisplayOnByDefault: Bool {
         didSet { defaults.set(keepDisplayOnByDefault, forKey: "keepDisplayOnByDefault") }
     }
+    /// Сочетание для смены языка ввода (модуль «Клавиатура»), по умолчанию выключено.
+    @Published var layoutHotkey: LayoutHotkey {
+        didSet {
+            defaults.set(layoutHotkey.rawValue, forKey: "layoutHotkey")
+            LayoutSwitcher.shared.apply(layoutHotkey)
+        }
+    }
 
     var onChange: (() -> Void)?
 
@@ -34,6 +41,7 @@ final class AppSettings: ObservableObject {
         showStatusItem = statusItem
         showInDock = defaults.bool(forKey: "showInDock") || !statusItem
         keepDisplayOnByDefault = defaults.bool(forKey: "keepDisplayOnByDefault")
+        layoutHotkey = defaults.string(forKey: "layoutHotkey").flatMap(LayoutHotkey.init) ?? .off
     }
 }
 

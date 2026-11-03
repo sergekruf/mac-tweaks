@@ -5,6 +5,9 @@ let package = Package(
     name: "MacTweaks",
     platforms: [.macOS(.v14)],
     targets: [
-        .executableTarget(name: "MacTweaks", path: "Sources/MacTweaks")
+        .executableTarget(name: "MacTweaks", dependencies: ["KeyChord"], path: "Sources/MacTweaks"),
+        // Логика сочетаний без зависимостей от системы — проверяется тестами
+        .target(name: "KeyChord", path: "Sources/KeyChord"),
+        .testTarget(name: "KeyChordTests", dependencies: ["KeyChord"], path: "Tests/KeyChordTests"),
     ]
 )

@@ -20,6 +20,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         awake.onChange = { [weak self] in self?.refreshStatusButton() }
         applyActivationPolicy()
         updateStatusItem()
+        // Перехват сочетания работает всё время, пока приложение запущено, и с закрытым окном
+        LayoutSwitcher.shared.apply(settings.layoutHotkey)
         if !launchedAsLoginItem { showMainWindow() }
     }
 

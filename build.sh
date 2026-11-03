@@ -10,7 +10,16 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp .build/release/MacTweaks "$APP/Contents/MacOS/"
 cp Resources/Info.plist "$APP/Contents/"
 cp Resources/AppIcon.icns "$APP/Contents/Resources/"
-codesign --force --sign - "$APP"
+# Постоянный сертификат нужен, чтобы «Мониторинг ввода» не слетал после пересборки (см. CLAUDE.md).
+# Нет сертификата — ad-hoc, как раньше.
+IDENTITY="${MACTWEAKS_SIGN_IDENTITY:-Mac Tweaks Dev}"
+if security find-identity -p codesigning | grep -qF "\"$IDENTITY\""; then
+  codesign --force --sign "$IDENTITY" "$APP"
+  echo "Подпись: $IDENTITY"
+else
+  codesign --force --sign - "$APP"
+  echo "Подпись: ad-hoc (сертификата «$IDENTITY» нет — разрешения слетят после пересборки, см. CLAUDE.md)"
+fi
 echo "Собрано: $APP"
 
 if [[ "${1:-}" == "--install" ]]; then
