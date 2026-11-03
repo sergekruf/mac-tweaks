@@ -19,6 +19,7 @@ enum MacTweaksMain {
 enum TweakModule: String, CaseIterable, Identifiable {
     case menuBar
     case dock
+    case keepAwake
     case app
 
     var id: String { rawValue }
@@ -27,7 +28,8 @@ enum TweakModule: String, CaseIterable, Identifiable {
         switch self {
         case .menuBar: "Строка меню"
         case .dock: "Dock"
-        case .app: "Приложение"
+        case .keepAwake: "Не засыпать"
+        case .app: "Настройки"
         }
     }
 
@@ -35,7 +37,8 @@ enum TweakModule: String, CaseIterable, Identifiable {
         switch self {
         case .menuBar: "menubar.rectangle"
         case .dock: "dock.rectangle"
-        case .app: "app.badge"
+        case .keepAwake: "cup.and.saucer"
+        case .app: "gearshape"
         }
     }
 
@@ -43,6 +46,7 @@ enum TweakModule: String, CaseIterable, Identifiable {
         switch self {
         case .menuBar: MenuBarSpacingView()
         case .dock: DockView()
+        case .keepAwake: KeepAwakeView()
         case .app: AppSettingsView()
         }
     }

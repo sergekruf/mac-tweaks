@@ -39,7 +39,6 @@ final class AppSettings: ObservableObject {
 
 struct AppSettingsView: View {
     @ObservedObject private var settings = AppSettings.shared
-    @ObservedObject private var awake = KeepAwake.shared
     @State private var loginStatus = SMAppService.mainApp.status
     @State private var loginError: String?
 
@@ -74,22 +73,9 @@ struct AppSettingsView: View {
                 Text("При входе в систему окно не открывается, приложение сразу уходит в строку меню.")
                     .font(.callout).foregroundStyle(.secondary)
             }
-
-            Section {
-                TimelineView(.periodic(from: .now, by: 30)) { _ in
-                    LabeledContent("Сейчас", value: awake.remainingText ?? "выключено")
-                }
-                Toggle("Не гасить экран по умолчанию", isOn: $settings.keepDisplayOnByDefault)
-                Text("Режим включается в меню значка Mac Tweaks. Без «Не гасить экран» Mac не засыпает, но дисплей гаснет как обычно. Галочка в меню действует до выхода из приложения, при следующем запуске берётся значение отсюда.")
-                    .font(.callout).foregroundStyle(.secondary)
-                Text("При закрытой крышке без внешнего монитора Mac всё равно уснёт: этот режим не отменяет сон по крышке и не трогает системные настройки сна.")
-                    .font(.caption).foregroundStyle(.secondary)
-            } header: {
-                Text("Не засыпать")
-            }
         }
         .formStyle(.grouped)
-        .navigationTitle("Приложение")
+        .navigationTitle("Настройки")
         .onAppear { loginStatus = SMAppService.mainApp.status }
     }
 
