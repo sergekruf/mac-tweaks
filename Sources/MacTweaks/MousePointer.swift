@@ -15,7 +15,6 @@ final class MousePointer: ObservableObject {
     /// Мыши, к которым применяется настройка.
     @Published private(set) var mice: [String] = []
 
-    private let client = IOHIDEventSystemClientCreateSimpleClient(kCFAllocatorDefault)
     private var settings = PointerSettings()
     /// Какой режим мы записали мыши (по RegistryID службы): HIDUseLinearScalingMouseAcceleration со службы не читается.
     private var writtenLinear: [UInt64: Bool] = [:]
@@ -53,12 +52,14 @@ final class MousePointer: ObservableObject {
     }
 
     func reloadMice() {
-        mice = mouseServices().map { (string($0, kIOHIDProductKey) ?? "Мышь") }
+        mice = mouseServices(IOHIDEventSystemClientCreateSimpleClient(kCFAllocatorDefault)).map { (string($0, kIOHIDProductKey) ?? "Мышь") }
     }
 
     // MARK: - HID
 
-    private func mouseServices() -> [IOHIDServiceClient] {
+    /// Клиент создаётся заново при каждом вызове: у долгоживущего простого клиента список служб не обновляется,
+    /// и переподключённая мышь в нём не появляется (проверено на macOS 27.2).
+    private func mouseServices(_ client: IOHIDEventSystemClient) -> [IOHIDServiceClient] {
         let services = IOHIDEventSystemClientCopyServices(client) as? [IOHIDServiceClient] ?? []
         return services.filter {
             IOHIDServiceClientConformsTo($0, UInt32(kHIDPage_GenericDesktop), UInt32(kHIDUsage_GD_Mouse)) != 0
@@ -68,7 +69,8 @@ final class MousePointer: ObservableObject {
 
     /// Ставит каждой мыши целевые значения, если они отличаются от текущих.
     private func sync() {
-        let services = mouseServices()
+        let client = IOHIDEventSystemClientCreateSimpleClient(kCFAllocatorDefault)
+        let services = mouseServices(client)
         let system = fixed(IOHIDEventSystemClientCopyProperty(client, kIOHIDMouseAccelerationType as CFString)) ?? 0.5
         // Через HID-клиент системный флаг не читается — берём из настройки, которую пишут Системные настройки
         let systemLinear = UserDefaults.standard.bool(forKey: "com.apple.mouse.linear")
