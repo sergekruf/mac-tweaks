@@ -46,16 +46,22 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(wheelLines, forKey: "wheelLines"); MouseScroller.shared.apply(scrollSettings) }
     }
     static let wheelLinesRange = 1...10
-    /// Указатель мыши: без ускорения и скорость в этом режиме.
-    @Published var pointerLinear: Bool {
-        didSet { defaults.set(pointerLinear, forKey: "pointerLinear"); MousePointer.shared.apply(pointerSettings) }
+    /// Указатель мыши: режим и скорость для каждого режима.
+    @Published var pointerMode: PointerMode {
+        didSet { defaults.set(pointerMode.rawValue, forKey: "pointerMode"); MousePointer.shared.apply(pointerSettings) }
     }
     @Published var pointerSpeed: Double {
         didSet { defaults.set(pointerSpeed, forKey: "pointerSpeed"); MousePointer.shared.apply(pointerSettings) }
     }
+    @Published var pointerWindowsSpeed: Double {
+        didSet { defaults.set(pointerWindowsSpeed, forKey: "pointerWindowsSpeed"); MousePointer.shared.apply(pointerSettings) }
+    }
+    @Published var pointerWindowsStrength: Double {
+        didSet { defaults.set(pointerWindowsStrength, forKey: "pointerWindowsStrength"); MousePointer.shared.apply(pointerSettings) }
+    }
 
     var pointerSettings: PointerSettings {
-        PointerSettings(linear: pointerLinear, speed: pointerSpeed)
+        PointerSettings(mode: pointerMode, speed: pointerSpeed, windowsSpeed: pointerWindowsSpeed, windowsStrength: pointerWindowsStrength)
     }
 
     var scrollSettings: ScrollSettings {
@@ -65,7 +71,7 @@ final class AppSettings: ObservableObject {
     var onChange: (() -> Void)?
 
     private init() {
-        defaults.register(defaults: ["showStatusItem": true, "showInDock": true, "keepDisplayOnByDefault": false, "wheelLines": 3, "pointerSpeed": PointerSettings.defaultSpeed])
+        defaults.register(defaults: ["showStatusItem": true, "showInDock": true, "keepDisplayOnByDefault": false, "wheelLines": 3, "pointerSpeed": PointerSettings.defaultSpeed, "pointerWindowsSpeed": PointerSettings.defaultWindowsSpeed, "pointerWindowsStrength": PointerSettings.defaultWindowsStrength])
         let statusItem = defaults.bool(forKey: "showStatusItem")
         showStatusItem = statusItem
         showInDock = defaults.bool(forKey: "showInDock") || !statusItem
@@ -73,7 +79,12 @@ final class AppSettings: ObservableObject {
         layoutHotkey = defaults.string(forKey: "layoutHotkey").flatMap(LayoutHotkey.init) ?? .off
         reverseWheel = defaults.bool(forKey: "reverseWheel")
         linearWheel = defaults.bool(forKey: "linearWheel")
-        pointerLinear = defaults.bool(forKey: "pointerLinear")
+        // Раньше был только переключатель «Без ускорения» (pointerLinear)
+        pointerMode = defaults.string(forKey: "pointerMode").flatMap(PointerMode.init)
+            ?? (defaults.bool(forKey: "pointerLinear") ? .linear : .system)
+        pointerWindowsStrength = min(max(defaults.double(forKey: "pointerWindowsStrength"), 0), 1)
+        pointerWindowsSpeed = min(max(defaults.double(forKey: "pointerWindowsSpeed"), PointerSettings.windowsSpeedRange.lowerBound),
+                                  PointerSettings.windowsSpeedRange.upperBound)
         pointerSpeed = min(max(defaults.double(forKey: "pointerSpeed"), PointerSettings.speedRange.lowerBound), PointerSettings.speedRange.upperBound)
         wheelLines = min(max(defaults.integer(forKey: "wheelLines"), Self.wheelLinesRange.lowerBound), Self.wheelLinesRange.upperBound)
     }

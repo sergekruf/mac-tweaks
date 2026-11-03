@@ -36,30 +36,63 @@ struct MouseView: View {
             }
 
             Section {
-                Toggle("Без ускорения (как в Windows)", isOn: $settings.pointerLinear)
-                Text("Курсор сдвигается строго пропорционально движению мыши: медленное и быстрое движение на одно и то же расстояние уводят курсор одинаково.")
+                Picker("Режим", selection: $settings.pointerMode) {
+                    Text("Как в системе").tag(PointerMode.system)
+                    Text("Без ускорения").tag(PointerMode.linear)
+                    Text("Как в Windows").tag(PointerMode.windows)
+                }
+                .pickerStyle(.segmented)
+                Text(modeNote)
                     .font(.callout).foregroundStyle(.secondary)
 
-                LabeledContent("Скорость указателя") {
-                    HStack {
-                        Slider(value: $settings.pointerSpeed, in: PointerSettings.speedRange, step: 0.1)
-                            .frame(minWidth: 180)
-                        Text(String(format: "%.1f", settings.pointerSpeed))
-                            .monospacedDigit()
-                            .frame(width: 32, alignment: .trailing)
+                switch settings.pointerMode {
+                case .system:
+                    EmptyView()
+                case .linear:
+                    speedSlider("Скорость указателя", value: $settings.pointerSpeed, in: PointerSettings.speedRange)
+                case .windows:
+                    speedSlider("Скорость на медленных движениях", value: $settings.pointerWindowsSpeed, in: PointerSettings.windowsSpeedRange)
+                    LabeledContent("Сила ускорения") {
+                        HStack {
+                            Slider(value: $settings.pointerWindowsStrength, in: PointerSettings.windowsStrengthRange, step: 0.05)
+                                .frame(minWidth: 180)
+                            Text("\(Int((settings.pointerWindowsStrength * 100).rounded())) %")
+                                .monospacedDigit()
+                                .frame(width: 40, alignment: .trailing)
+                        }
+                    }
+                    LabeledContent("Наборы") {
+                        HStack {
+                            ForEach(Self.strengthPresets, id: \.value) { preset in
+                                Button(preset.title) { settings.pointerWindowsStrength = preset.value }
+                                    .buttonStyle(.bordered)
+                                    .tint(abs(settings.pointerWindowsStrength - preset.value) < 0.001 ? .accentColor : nil)
+                            }
+                        }
+                    }
+                    Text("Наборы меняют только силу разгона, скорость на медленных движениях остаётся вашей. 100 % — как в Windows: на быстрых движениях курсор разгоняется до ~4,5 раза. Меньше — мягче разгон и меньше промахов при подходе к цели. «Без разгона» — как ускорение 0 и скорость ~0,35 в LinearMouse, которые советуют его пользователи.")
+                        .font(.callout).foregroundStyle(.secondary)
+                    if !pointer.motionPermission {
+                        Text("Нужен «Мониторинг ввода»: без него Mac Tweaks не видит скорость мыши. Включите Mac Tweaks в Системных настройках → Конфиденциальность и безопасность → Мониторинг ввода.")
+                            .font(.callout).foregroundStyle(.red)
+                        Button("Открыть Системные настройки") { EventTapPermission.inputMonitoring.openSettings() }
+                    } else if !pointer.motionRunning {
+                        Text("Не удалось подключиться к мыши. Перезапустите Mac Tweaks.")
+                            .font(.callout).foregroundStyle(.red)
                     }
                 }
-                .disabled(!settings.pointerLinear)
-                Text("Работает в режиме без ускорения и заменяет для мыши ползунок «Скорость перемещения» из Системных настроек. Меняется сразу — подвигайте и подберите удобную.")
-                    .font(.callout).foregroundStyle(.secondary)
+                if settings.pointerMode != .system && !pointer.systemLinear {
+                    Text("В системе включено «Ускорение указателя» — тогда Mac Tweaks меняет уровень ускорения Apple, а не скорость, и режимы работают не так, как описано.")
+                        .font(.callout).foregroundStyle(.orange)
+                }
 
                 HStack {
                     LabeledContent("Мыши", value: pointer.mice.isEmpty ? "не подключены" : pointer.mice.joined(separator: ", "))
                     Spacer()
-                    Button("Сбросить к системным") { settings.pointerLinear = false }
-                        .disabled(!settings.pointerLinear)
+                    Button("Сбросить к системным") { settings.pointerMode = .system }
+                        .disabled(settings.pointerMode == .system)
                 }
-                Text("Только для мышей: тачпад не меняется. Разрешение не нужно. Работает, пока Mac Tweaks запущен; при выходе из приложения мыши возвращаются к системному поведению.")
+                Text("Только для мышей: тачпад не меняется. Работает, пока Mac Tweaks запущен; при выходе из приложения мыши возвращаются к системному поведению.")
                     .font(.callout).foregroundStyle(.secondary)
             } header: {
                 Text("Указатель мыши")
@@ -108,6 +141,33 @@ struct MouseView: View {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(2))
                 scroller.refreshPermission()
+            }
+        }
+    }
+
+    private static let strengthPresets: [(title: String, value: Double)] = [
+        ("Без разгона", 0), ("Мягко", 0.25), ("Средне", 0.5), ("Как в Windows", 1),
+    ]
+
+    private var modeNote: String {
+        switch settings.pointerMode {
+        case .system:
+            "Mac Tweaks указатель не трогает."
+        case .linear:
+            "Курсор сдвигается строго пропорционально движению мыши: медленное и быстрое движение на одно и то же расстояние уводят курсор одинаково."
+        case .windows:
+            "Как «Повышенная точность указателя» в Windows: при медленном движении курсор идёт медленно и точно — легко попасть в мелкую кнопку, при быстром разгоняется, чтобы пересечь экран коротким движением. Как только движение замедляется у цели, курсор сразу снова медленный."
+        }
+    }
+
+    private func speedSlider(_ title: String, value: Binding<Double>, in range: ClosedRange<Double>) -> some View {
+        LabeledContent(title) {
+            HStack {
+                Slider(value: value, in: range, step: 0.05)
+                    .frame(minWidth: 180)
+                Text(String(format: "%.2f", value.wrappedValue))
+                    .monospacedDigit()
+                    .frame(width: 40, alignment: .trailing)
             }
         }
     }
