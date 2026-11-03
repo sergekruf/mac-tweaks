@@ -11,7 +11,7 @@ struct KeyboardView: View {
                 Toggle("Command+Shift меняет язык", isOn: Binding(
                     get: { settings.layoutHotkey == .commandShift },
                     set: { settings.layoutHotkey = $0 ? .commandShift : .off }))
-                Text("Нажмите и отпустите Command и Shift (в любом порядке, левые или правые) — включится следующая раскладка. Если между нажатием и отпусканием была другая клавиша (⌘⇧4, ⌘⇧Z), язык не меняется и сочетание работает как обычно.")
+                Text("Нажмите и отпустите Command и Shift (в любом порядке, левые или правые) — включится следующая раскладка. Если между нажатием и отпусканием была другая клавиша (⌘⇧4, ⌘⇧Z), язык не меняется и сочетание работает как обычно. Можно отпустить Command, держа Shift, — язык сменится сразу, и следующий символ с Shift (например, «@») напечатается уже в новой раскладке.")
                     .font(.callout).foregroundStyle(.secondary)
                 if settings.layoutHotkey != .off {
                     LabeledContent("Состояние", value: stateText)

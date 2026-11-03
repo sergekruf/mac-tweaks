@@ -152,7 +152,8 @@ final class LayoutSwitcher: ObservableObject {
             detector?.reset()
         case .flagsChanged:
             if detector?.handle(.modifiers(Self.modifierKeys(event.flags))) == true {
-                DispatchQueue.main.async { LayoutSwitcher.shared.selectNextSource() }
+                // Сразу, не откладывая: следующая клавиша (Shift+2 → «@») должна прийти уже в новой раскладке
+                selectNextSource()
             }
         default:
             _ = detector?.handle(.otherKey)

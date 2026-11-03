@@ -37,14 +37,21 @@ public struct ModifierChord: Hashable, Sendable {
     }
 }
 
-/// Конечный автомат одного нажатия. Срабатывает, когда отпущены все модификаторы, если по пути
-/// сочетание было набрано целиком, не было лишних модификаторов и других клавиш.
+/// Конечный автомат одного нажатия. Срабатывает, когда сочетание было набрано целиком без лишних модификаторов
+/// и других клавиш, а затем зажатыми остались только Shift (или ничего). Так Cmd↓ Shift↓ Cmd↑ меняет язык сразу,
+/// и следующий Shift+2 печатает «@» уже в новой раскладке. Если же зажатым остался Cmd, ждём полного отпускания:
+/// Cmd+Shift, затем Cmd+Tab — это не смена языка.
 /// Порядок нажатия и отпускания не важен: Cmd→Shift и Shift→Cmd равноправны.
 public struct ModifierTapDetector: Sendable {
     public let chord: ModifierChord
     private var held: Set<ModifierKey> = []
     private var reached = false
     private var spoiled = false
+    /// Уже сработали в этом нажатии — до полного отпускания больше ничего не делаем.
+    private var fired = false
+
+    /// Модификаторы, которые участвуют в наборе текста: с ними после срабатывания можно сразу печатать.
+    static let typingModifiers: Set<ModifierKey> = [.leftShift, .rightShift]
 
     public init(chord: ModifierChord) {
         self.chord = chord
@@ -59,14 +66,15 @@ public struct ModifierTapDetector: Sendable {
             return false
         case .modifiers(let now):
             held = now
-            if held.isEmpty {
-                let fire = reached && !spoiled
-                reached = false
-                spoiled = false
-                return fire
+            defer {
+                if held.isEmpty { reached = false; spoiled = false; fired = false }
             }
             if !held.isSubset(of: chord.allowed) { spoiled = true }
-            if chord.isSatisfied(by: held) { reached = true }
+            if chord.isSatisfied(by: held) { reached = true; return false }
+            if reached && !spoiled && !fired && held.isSubset(of: Self.typingModifiers) {
+                fired = true
+                return true
+            }
             return false
         }
     }
@@ -76,5 +84,6 @@ public struct ModifierTapDetector: Sendable {
         held = []
         reached = false
         spoiled = false
+        fired = false
     }
 }
