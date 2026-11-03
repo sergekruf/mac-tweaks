@@ -24,7 +24,7 @@
 ## Сборка
 
 ```bash
-./build.sh            # собирает dist/MacTweaks.app (ad-hoc подпись)
+./build.sh            # собирает dist/MacTweaks.app (подпись «Mac Tweaks Dev», без неё ad-hoc)
 ./build.sh --install  # + копирует в ~/Applications
 swift test            # тесты KeyChord, ScrollWheel и PointerMath
 ```
