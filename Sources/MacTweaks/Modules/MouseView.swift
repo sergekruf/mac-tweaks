@@ -61,7 +61,16 @@ struct MouseView: View {
                                 .frame(width: 40, alignment: .trailing)
                         }
                     }
-                    Text("100 % — как в Windows: на быстрых движениях курсор разгоняется до ~4,5 раза. Меньше — мягче разгон и меньше промахов при подходе к цели; 0 % — без ускорения.")
+                    LabeledContent("Наборы") {
+                        HStack {
+                            ForEach(Self.strengthPresets, id: \.value) { preset in
+                                Button(preset.title) { settings.pointerWindowsStrength = preset.value }
+                                    .buttonStyle(.bordered)
+                                    .tint(abs(settings.pointerWindowsStrength - preset.value) < 0.001 ? .accentColor : nil)
+                            }
+                        }
+                    }
+                    Text("Наборы меняют только силу разгона, скорость на медленных движениях остаётся вашей. 100 % — как в Windows: на быстрых движениях курсор разгоняется до ~4,5 раза. Меньше — мягче разгон и меньше промахов при подходе к цели. «Без разгона» — как ускорение 0 и скорость ~0,35 в LinearMouse, которые советуют его пользователи.")
                         .font(.callout).foregroundStyle(.secondary)
                     if !pointer.motionPermission {
                         Text("Нужен «Мониторинг ввода»: без него Mac Tweaks не видит скорость мыши. Включите Mac Tweaks в Системных настройках → Конфиденциальность и безопасность → Мониторинг ввода.")
@@ -135,6 +144,10 @@ struct MouseView: View {
             }
         }
     }
+
+    private static let strengthPresets: [(title: String, value: Double)] = [
+        ("Без разгона", 0), ("Мягко", 0.25), ("Средне", 0.5), ("Как в Windows", 1),
+    ]
 
     private var modeNote: String {
         switch settings.pointerMode {

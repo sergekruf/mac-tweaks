@@ -11,10 +11,11 @@ public enum WindowsCurve {
     /// Коэффициент на медленных движениях (первый отрезок).
     static var slowGain: Double { outputs[1] / speeds[1] }
 
-    /// Множитель пишется ступенями по ~10 %, чтобы не дёргать систему на каждый отсчёт мыши:
-    /// от медленных до самых быстрых движений — около 16 ступеней.
-    public static let stepRatio = 1.1
     public static let maxMultiplier = 10.0
+    /// Новый множитель пишется, только если отличается от текущего больше чем на 8 %. Без такого порога на постоянной
+    /// скорости множитель прыгал вверх-вниз: у ступеней по 10 % почти половина смен были разворотами (по записи движений
+    /// пользователя: 695 из 1477 за 60 с), курсор вёл себя чуть по-разному на одинаковых движениях.
+    public static let hysteresis = 0.08
 
     /// Скорость по Windows из отсчётов мыши в секунду.
     public static func windowsSpeed(countsPerSecond: Double) -> Double {
@@ -36,22 +37,32 @@ public enum WindowsCurve {
     public static func multiplier(countsPerSecond: Double, base: Double, strength: Double = 1) -> Double {
         let full = relativeGain(windowsSpeed: windowsSpeed(countsPerSecond: countsPerSecond))
         let gain = 1 + min(max(strength, 0), 1) * (full - 1)
-        let steps = (log(gain) / log(stepRatio)).rounded()
-        return min(base * pow(stepRatio, steps), maxMultiplier)
+        return min(base * gain, maxMultiplier)
+    }
+
+    /// Стоит ли менять записанный множитель на новый.
+    public static func shouldUpdate(current: Double?, to value: Double) -> Bool {
+        guard let current else { return true }
+        return abs(log(value / current)) > log(1 + hysteresis)
     }
 }
 
 /// Сглаженная скорость мыши по сырым отсчётам. Пауза дольше `idle` — новое движение, скорость начинается с нуля,
 /// поэтому первые отсчёты после остановки идут с «медленным» множителем — для точного наведения.
-/// Разгон сглаживается медленнее, торможение — почти сразу: иначе при подходе к цели курсор ещё летит с большим
-/// множителем и проскакивает её (так было с одной постоянной 30 мс).
+/// Скорость считается по окну в 16 мс, а не по одному отчёту: по Bluetooth отчёты приходят неровно (бывают склеенные),
+/// и скорость отдельного отчёта скачет. Разгон сглаживается медленнее, торможение — быстро: иначе при подходе к цели
+/// курсор ещё летит с большим множителем и проскакивает её (так было с одной постоянной 30 мс).
+/// Параметры подобраны на записи движений пользователя (M240 B по Bluetooth, отчёты ~7,5 мс).
 public struct MotionSpeed {
     public private(set) var countsPerSecond: Double = 0
     private var lastTime: Double?
+    private var window: [(time: Double, distance: Double)] = []
 
+    /// Окно, по которому считается скорость, с.
+    public static let window = 0.016
     /// Постоянные сглаживания при разгоне и торможении, с.
-    public static let smoothingUp = 0.03
-    public static let smoothingDown = 0.006
+    public static let smoothingUp = 0.04
+    public static let smoothingDown = 0.01
     /// Пауза, после которой движение считается новым, с.
     public static let idle = 0.08
     /// Интервал отчётов мыши по умолчанию (125 Гц) — для первого отсчёта движения.
@@ -69,9 +80,14 @@ public struct MotionSpeed {
             dt = max(time - lastTime, 0.001)
         } else {
             countsPerSecond = 0
+            window = []
         }
         lastTime = time
-        let instant = (dx * dx + dy * dy).squareRoot() / dt
+        window.append((time, (dx * dx + dy * dy).squareRoot()))
+        window.removeAll { time - $0.time >= Self.window }
+        // Длительность окна: от первого отчёта в нём плюс один интервал — сам этот отчёт тоже занимает время
+        let span = time - window[0].time + Self.defaultInterval
+        let instant = window.reduce(0) { $0 + $1.distance } / span
         let tau = instant > countsPerSecond ? Self.smoothingUp : Self.smoothingDown
         countsPerSecond += (1 - exp(-dt / tau)) * (instant - countsPerSecond)
         return countsPerSecond
@@ -80,5 +96,6 @@ public struct MotionSpeed {
     public mutating func reset() {
         countsPerSecond = 0
         lastTime = nil
+        window = []
     }
 }

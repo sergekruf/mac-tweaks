@@ -116,18 +116,10 @@ final class MousePointer: ObservableObject {
         motionPermission = EventTapPermission.inputMonitoring.isGranted
     }
 
-    /// Каждая запись пересобирает ускоритель в WindowServer и пишет строку в системный лог, а при движении ступень
-    /// меняется ~50 раз в секунду (проверено) — поэтому разгон пишем не чаще раза в 40 мс. Торможение — сразу,
-    /// иначе курсор проскакивает цель.
-    private static let minWriteInterval = 0.04
-    private var lastWrite: UInt64 = 0
-
+    /// Каждая запись пересобирает ускоритель в WindowServer и пишет строку в его лог, поэтому мелкие изменения
+    /// (порог `WindowsCurve.hysteresis`) не пишем — на записи движений это ~11 записей в секунду движения.
     private func setMultiplier(_ value: Double, force: Bool = false) {
-        guard value != multiplier else { return }
-        let now = mach_absolute_time()
-        let slowingDown = multiplier.map { value < $0 } ?? true
-        guard force || slowingDown || seconds(now - lastWrite) >= Self.minWriteInterval else { return }
-        lastWrite = now
+        guard force ? value != multiplier : WindowsCurve.shouldUpdate(current: multiplier, to: value) else { return }
         multiplier = value
         for service in services { set(service, value) }
     }
