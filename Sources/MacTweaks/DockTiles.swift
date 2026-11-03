@@ -18,6 +18,10 @@ struct DockTiles {
         var regular = 0
         var small = 0
         var total: Int { regular + small }
+
+        subscript(spacer: Spacer) -> Int {
+            spacer == .regular ? regular : small
+        }
     }
 
     enum Failure: LocalizedError {

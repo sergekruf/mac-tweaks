@@ -10,6 +10,7 @@ final class DockModel: ObservableObject {
     @Published var status: String?
     @Published private(set) var counts: [DockTiles.Section: DockTiles.Counts] = [:]
     @Published private(set) var lastBackup: URL?
+    @Published private(set) var busy = false
 
     private let tiles = DockTiles()
     /// Копия делается один раз за запуск приложения — перед первой записью.
@@ -25,19 +26,24 @@ final class DockModel: ObservableObject {
     }
 
     func add(_ spacer: DockTiles.Spacer, to section: DockTiles.Section) {
-        perform {
-            try tiles.add(spacer, count: count, to: section)
-            let kind = spacer == .regular ? "обычных" : "узких"
-            let place = section == .apps ? "к приложениям" : "в правую часть"
-            return "Добавлено \(kind) пробелов \(place): \(count). Dock перезапущен — перетащите пробелы на нужные места."
-        }
+        let tiles = tiles, n = count
+        let expected = tiles.counts(section)[spacer] + n
+        let missing = { max(0, expected - tiles.counts(section)[spacer]) }
+        let kind = spacer == .regular ? "обычных" : "узких"
+        let place = section == .apps ? "к приложениям" : "в правую часть"
+        perform(done: "Добавлено \(kind) пробелов \(place): \(n). Dock перезапущен — перетащите пробелы на нужные места.",
+                change: { try tiles.add(spacer, count: n, to: section) },
+                pending: missing,
+                redo: { try tiles.add(spacer, count: missing(), to: section) })
     }
 
     func removeAll() {
-        perform {
-            let removed = try tiles.removeAllSpacers()
-            return removed == 0 ? "Пробелов в Dock нет." : "Убрано пробелов: \(removed). Dock перезапущен."
-        }
+        let tiles = tiles
+        let pending = { DockTiles.Section.allCases.reduce(0) { $0 + tiles.counts($1).total } }
+        perform(done: "Пробелы убраны. Dock перезапущен.",
+                change: { try tiles.removeAllSpacers() },
+                pending: pending,
+                redo: { try tiles.removeAllSpacers() })
     }
 
     func restoreLatest() {
@@ -58,19 +64,60 @@ final class DockModel: ObservableObject {
         NSWorkspace.shared.activateFileViewerSelecting([lastBackup ?? dir])
     }
 
-    /// Резервная копия перед первой записью, запись, перезапуск Dock.
-    private func perform(_ change: () throws -> String) {
+    /// Резервная копия перед первой записью, запись, перезапуск Dock и проверка.
+    /// Dock при завершении сохраняет свой список значков из памяти (например, после
+    /// перетаскивания) и может затереть нашу запись. Поэтому после перезапуска
+    /// перечитываем настройки и при необходимости вносим изменение ещё раз.
+    private func perform(done: String,
+                         change: () throws -> Void,
+                         pending: @escaping () -> Int,
+                         redo: @escaping () throws -> Void) {
         do {
             if !backedUp {
                 _ = try DockBackup.make()
                 backedUp = true
             }
-            status = try change()
-            Shell.killall(["Dock"])
+            try change()
         } catch {
             status = error.localizedDescription
+            reload()
+            return
         }
-        reload()
+        busy = true
+        status = "Перезапускаю Dock…"
+        Task {
+            await Self.restartDock()
+            var text = done
+            if pending() > 0 {
+                do {
+                    try redo()
+                    await Self.restartDock()
+                    text += pending() > 0
+                        ? " Dock снова затёр изменение — попробуйте ещё раз."
+                        : " Dock при перезапуске записал старый список значков, изменение внесено повторно."
+                } catch {
+                    text = error.localizedDescription
+                }
+            }
+            status = text
+            busy = false
+            reload()
+        }
+    }
+
+    /// `killall Dock` и ожидание, пока launchd запустит новый процесс Dock.
+    private static func restartDock() async {
+        let oldPID = dockPID
+        Shell.killall(["Dock"])
+        for _ in 0..<25 {
+            try? await Task.sleep(for: .milliseconds(200))
+            if let pid = dockPID, pid != oldPID { break }
+        }
+        try? await Task.sleep(for: .milliseconds(800))
+    }
+
+    private static var dockPID: pid_t? {
+        NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.dock").first?.processIdentifier
     }
 }
 
@@ -126,6 +173,7 @@ struct DockView: View {
             }
         }
         .formStyle(.grouped)
+        .disabled(model.busy)
         .navigationTitle("Dock")
         .confirmationDialog("Убрать все пробелы из Dock?", isPresented: $confirmRemove) {
             Button("Убрать", role: .destructive) { model.removeAll() }
