@@ -35,3 +35,7 @@ swift test
 - [docs/ROADMAP.md](docs/ROADMAP.md) — статусы функций и идеи.
 - [docs/JOURNAL.md](docs/JOURNAL.md) — журнал разработки: что пробовали, что сработало и что нет на разных версиях macOS.
 - [CLAUDE.md](CLAUDE.md) — устройство кода и порядок работы.
+
+## Лицензия
+
+[MIT](LICENSE).
