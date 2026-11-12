@@ -3,14 +3,21 @@
 #   --install  копирует в ~/Applications и перезапускает. Только из основной папки на ветке master:
 #              установленная версия должна быть одна для всех сессий (см. CLAUDE.md, «Как ведётся разработка»).
 #   --run      закрывает установленную копию и запускает dist/MacTweaks.app — для проверки ветки функции.
+#   --release  универсальная сборка (Apple Silicon + Intel) и архив dist/MacTweaks-<версия>.zip для релиза на GitHub.
 set -euo pipefail
 cd "$(dirname "$0")"
 
-swift build -c release
+if [[ "${1:-}" == "--release" ]]; then
+  swift build -c release --arch arm64 --arch x86_64
+  BIN="$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)/MacTweaks"
+else
+  swift build -c release
+  BIN=.build/release/MacTweaks
+fi
 APP=dist/MacTweaks.app
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp .build/release/MacTweaks "$APP/Contents/MacOS/"
+cp "$BIN" "$APP/Contents/MacOS/"
 cp Resources/Info.plist "$APP/Contents/"
 cp Resources/AppIcon.icns "$APP/Contents/Resources/"
 # Постоянный сертификат нужен, чтобы «Мониторинг ввода» не слетал после пересборки (см. CLAUDE.md).
@@ -39,6 +46,13 @@ case "${1:-}" in
     cp -R "$APP" ~/Applications/
     echo "Установлено: ~/Applications/MacTweaks.app ($(git rev-parse --short HEAD))"
     open ~/Applications/MacTweaks.app
+    ;;
+  --release)
+    VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" Resources/Info.plist)
+    ZIP="dist/MacTweaks-$VERSION.zip"
+    rm -f "$ZIP"
+    ditto -c -k --keepParent "$APP" "$ZIP"
+    echo "Архив: $ZIP ($(lipo -archs "$APP/Contents/MacOS/MacTweaks"))"
     ;;
   --run)
     pkill -x MacTweaks || true

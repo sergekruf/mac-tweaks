@@ -16,6 +16,16 @@
 | Не засыпать | Mac не засыпает 15 мин – 8 ч или без срока, по желанию не гаснет экран; управляется из значка-ключа в строке меню |
 | Настройки | Значок в строке меню и в Dock, запуск при входе в систему |
 
+## Установка
+
+Скачайте `MacTweaks-<версия>.zip` из [Releases](https://github.com/sergekruf/mac-tweaks/releases), распакуйте и перенесите
+`MacTweaks.app` в «Программы». Приложение не нотаризовано Apple, поэтому при первом запуске macOS его заблокирует:
+откройте Системные настройки → Конфиденциальность и безопасность → «Всё равно открыть». Или в Терминале:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/MacTweaks.app
+```
+
 ## Сборка
 
 Нужны macOS 14+ и Swift (Xcode или Command Line Tools). Xcode-проекта нет, это Swift Package.
@@ -24,6 +34,7 @@
 ./scripts/make-signing-cert.sh   # один раз: локальный сертификат подписи, чтобы разрешения не слетали после пересборки
 ./build.sh                       # dist/MacTweaks.app
 ./build.sh --install             # + копирует в ~/Applications и запускает
+./build.sh --release             # универсальная сборка и dist/MacTweaks-<версия>.zip для релиза
 swift test
 ```
 
